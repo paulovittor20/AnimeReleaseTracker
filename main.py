@@ -1,67 +1,70 @@
-import os 
+import os
 
+from anime_manager import adicionar_anime, atualizar_animes, remover_anime
 from tracker import mostrar_episodios, mostrar_episodios_de_hoje
-from anime_manager import adicionar_anime, remover_anime, atualizar_animes
+
 
 def limpar_tela():
-    os.system("cls")
+    """Limpa o terminal no Windows, Linux ou macOS."""
+    comando = "cls" if os.name == "nt" else "clear"
+    os.system(comando)
 
-def mostrar_avisos(avisos):
 
-    if not any(avisos.values()):
+def mostrar_categoria_de_avisos(titulo, avisos):
+    """
+    Exibe uma categoria de avisos.
 
+    Esta função evita repetir o mesmo bloco de código
+    para temporadas finalizadas, hiatos, retornos etc.
+    """
+    if not avisos:
         return
 
+    print(titulo)
+    print()
+
+    for aviso in avisos:
+        print(aviso)
+        print()
+
+
+def mostrar_avisos(avisos):
+    """Exibe as mudanças encontradas durante a atualização dos animes."""
+    if not any(avisos.values()):
+        return
 
     print("======================")
     print("🔔 Novidades encontradas")
     print("======================\n")
 
+    mostrar_categoria_de_avisos(
+    "🔥 Novos episódios",
+    avisos["episodios"],
+)
 
-    if avisos["finalizados"]:
+    mostrar_categoria_de_avisos(
+        "🎉 Temporadas finalizadas",
+        avisos["finalizados"],
+    )
 
-        print("🎉 Temporadas finalizadas\n")
+    mostrar_categoria_de_avisos(
+        "⏸ Animes em hiato",
+        avisos["hiato"],
+    )
 
-        for aviso in avisos["finalizados"]:
+    mostrar_categoria_de_avisos(
+        "🔥 Retornos",
+        avisos["retornos"],
+    )
 
-            print(aviso)
-            print()
+    mostrar_categoria_de_avisos(
+        "🔄 Outras alterações",
+        avisos["outros"],
+    )
 
-
-
-    if avisos["hiato"]:
-
-        print("⏸ Animes em hiato\n")
-
-        for aviso in avisos["hiato"]:
-
-            print(aviso)
-            print()
-
-
-
-    if avisos["retornos"]:
-
-        print("🔥 Retornos\n")
-
-        for aviso in avisos["retornos"]:
-
-            print(aviso)
-            print()
-
-
-
-    if avisos["outros"]:
-
-        print("🔄 Outras alterações\n")
-
-        for aviso in avisos["outros"]:
-
-            print(aviso)
-            print()
 
 def menu():
-
+    """Exibe as opções disponíveis no programa."""
     print("======================")
     print(" Anime Release Tracker ")
     print("======================")
@@ -72,57 +75,44 @@ def menu():
     print("4 - Remover anime")
     print("5 - Sair")
 
-avisos = atualizar_animes()
 
-if any(avisos.values()):
+def executar_programa():
+    """Inicializa o tracker e mantém o menu principal em execução."""
 
-    mostrar_avisos(avisos)
+    # Atualiza os animes uma única vez quando o programa é iniciado.
+    avisos = atualizar_animes()
 
-    input("\nPressione ENTER para continuar...")
+    if any(avisos.values()):
+        mostrar_avisos(avisos)
+        input("\nPressione ENTER para continuar...")
 
+    while True:
+        limpar_tela()
+        menu()
 
-while True:
+        opcao = input("\nEscolha uma opção: ").strip()
 
-    limpar_tela()
+        if opcao == "1":
+            mostrar_episodios()
 
-    menu()
+        elif opcao == "2":
+            adicionar_anime()
 
-    opcao = input("\nEscolha uma opção: ")
+        elif opcao == "3":
+            mostrar_episodios_de_hoje()
 
+        elif opcao == "4":
+            remover_anime()
 
-    if opcao == "1":
+        elif opcao == "5":
+            print("\nAté mais!")
+            break
 
-        mostrar_episodios()
+        else:
+            print("\n⚠️ Opção inválida. Escolha um número de 1 a 5.")
 
-
-    elif opcao == "2":
-
-        adicionar_anime()
-
-
-    elif opcao == "3":
-
-        mostrar_episodios_de_hoje()
-
-
-    elif opcao == "4":
-
-        remover_anime()
-
-
-    elif opcao == "5":
-
-        print("Até mais!")
-
-        break
+        input("\nPressione ENTER para continuar...")
 
 
-    else:
-
-        print("\n⚠️ Opção inválida. Escolha um número de 1 a 5.")
-
-
-
-    input("\nPressione ENTER para continuar...")
-
-    limpar_tela()
+if __name__ == "__main__":
+    executar_programa()

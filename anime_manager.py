@@ -1,436 +1,418 @@
 import json
-from datetime import datetime 
-from api import buscar_animes_por_nome, buscar_anime, buscar_calendario_anime
+from datetime import datetime
+from pathlib import Path
+
+from api import (
+    buscar_anime,
+    buscar_animes_por_nome,
+    buscar_calendario_anime,
+)
 
 
-ARQUIVO = "animes.json"
+# O caminho é baseado na localização deste arquivo.
+# Assim, o JSON continua sendo encontrado mesmo que o programa
+# seja executado a partir de outra pasta.
+ARQUIVO = Path(__file__).with_name("animes.json")
+
+
+def obter_titulo(anime):
+    """
+    Retorna o título em inglês quando disponível.
+
+    Caso a API não tenha um título em inglês,
+    utiliza o título original em romaji.
+    """
+    return anime["title"]["english"] or anime["title"]["romaji"]
 
 
 def formatar_tipo(tipo):
-
+    """Converte o tipo retornado pela API para um nome mais amigável."""
     tipos = {
         "TV": "Anime de TV",
         "ONA": "Anime Online",
         "OVA": "Especial OVA",
         "MOVIE": "Filme",
         "SPECIAL": "Especial",
-        "MUSIC": "Clipe Musical"
+        "MUSIC": "Clipe Musical",
     }
 
     return tipos.get(tipo, "Outro")
 
 
 def formatar_status(status):
-
+    """Converte o status retornado pela API para português."""
     status_nomes = {
         "RELEASING": "Em lançamento",
         "FINISHED": "Finalizado",
         "HIATUS": "Em hiato",
         "NOT_YET_RELEASED": "Ainda não lançado",
-        "CANCELLED": "Cancelado"
+        "CANCELLED": "Cancelado",
     }
 
     return status_nomes.get(status, "Desconhecido")
 
 
 def carregar_animes():
+    """Carrega e devolve a lista de animes salva no JSON."""
 
-    with open(ARQUIVO, "r", encoding="utf-8") as arquivo:
-        return json.load(arquivo)
+    # Caso o arquivo ainda não exista, cria uma lista vazia.
+    if not ARQUIVO.exists():
+        salvar_animes([])
+        return []
 
+    try:
+        with ARQUIVO.open("r", encoding="utf-8") as arquivo:
+            return json.load(arquivo)
+
+    except json.JSONDecodeError:
+        print("\n⚠️ O arquivo animes.json está vazio ou corrompido.")
+        return []
 
 
 def salvar_animes(animes):
-
-    with open(ARQUIVO, "w", encoding="utf-8") as arquivo:
+    """Salva a lista completa de animes no arquivo JSON."""
+    with ARQUIVO.open("w", encoding="utf-8") as arquivo:
         json.dump(
             animes,
             arquivo,
             indent=4,
-            ensure_ascii=False
+            ensure_ascii=False,
         )
+
+
+def descobrir_ultimo_episodio(dados, anime_id):
+    """
+    Descobre o último episódio já lançado e sua data.
+
+    Retorna uma tupla no formato:
+    (numero_do_episodio, data_do_episodio)
+    """
+    ultimo_episodio = 0
+    data_ultimo_episodio = None
+
+    proximo_episodio = dados.get("nextAiringEpisode")
+
+    if proximo_episodio:
+        ultimo_episodio = proximo_episodio["episode"] - 1
+
+        calendario = buscar_calendario_anime(anime_id)
+
+        if calendario:
+            episodios = calendario["airingSchedule"]["nodes"]
+
+            for episodio in episodios:
+                if episodio["episode"] != ultimo_episodio:
+                    continue
+
+                data = datetime.fromtimestamp(episodio["airingAt"])
+                data_ultimo_episodio = data.strftime("%d/%m/%Y")
+                break
+
+    elif dados["status"] == "FINISHED":
+        ultimo_episodio = dados["episodes"] or 0
+
+    return ultimo_episodio, data_ultimo_episodio
+
+
+def criar_aviso_de_status(nome, status_antigo, status_novo):
+    """
+    Cria a mensagem e informa em qual categoria ela deve aparecer.
+
+    Retorna:
+    (categoria, mensagem)
+
+    Caso o status não tenha mudado, retorna:
+    (None, None)
+    """
+    if status_antigo == status_novo:
+        return None, None
+
+    if status_antigo == "RELEASING" and status_novo == "FINISHED":
+        return (
+            "finalizados",
+            f"🎉 {nome}\nA temporada foi finalizada!",
+        )
+
+    if status_antigo == "RELEASING" and status_novo == "HIATUS":
+        return (
+            "hiato",
+            f"⏸ {nome}\nO anime entrou em hiato.",
+        )
+
+    if status_antigo == "HIATUS" and status_novo == "RELEASING":
+        return (
+            "retornos",
+            f"🔥 {nome}\nO anime voltou do hiato!",
+        )
+
+    if status_antigo == "NOT_YET_RELEASED" and status_novo == "RELEASING":
+        return (
+            "outros",
+            f"🚀 {nome}\nO anime começou a ser lançado!",
+        )
+
+    mensagem = (
+        f"🔄 {nome}\n"
+        f"Status alterado: "
+        f"{formatar_status(status_antigo)} → "
+        f"{formatar_status(status_novo)}"
+    )
+
+    return "outros", mensagem
+
+
+def criar_aviso_de_episodio(
+    nome,
+    episodio_antigo,
+    episodio_novo,
+    data_episodio=None,
+):
+    """
+    Cria um aviso quando o número do último episódio lançado aumenta.
+
+    Retorna None quando nenhum episódio novo foi encontrado.
+    """
+    if episodio_novo <= episodio_antigo:
+        return None
+
+    quantidade_nova = episodio_novo - episodio_antigo
+
+    if quantidade_nova == 1:
+        mensagem = (
+            f"🔥 {nome}\n"
+            f"Novo episódio lançado: episódio {episodio_novo}"
+        )
+
+    else:
+        mensagem = (
+            f"🔥 {nome}\n"
+            f"{quantidade_nova} episódios novos foram encontrados!\n"
+            f"Último episódio disponível: {episodio_novo}"
+        )
+
+    if data_episodio:
+        mensagem += f"\nData do lançamento: {data_episodio}"
+
+    return mensagem
 
 
 def atualizar_animes():
+    """
+    Consulta novamente os animes cadastrados e atualiza seus dados.
 
+    Também devolve os avisos encontrados para que o main.py
+    possa exibi-los ao iniciar o programa.
+    """
     animes = carregar_animes()
 
     avisos = {
+        "episodios": [],
         "finalizados": [],
         "hiato": [],
         "retornos": [],
-        "outros": []
+        "outros": [],
     }
 
-
     for anime in animes:
-
         dados = buscar_anime(anime["id"])
 
-
+        # Se a API falhar para um anime, os outros continuam sendo atualizados.
         if not dados:
             continue
 
-
+        nome_novo = obter_titulo(dados)
         status_antigo = anime.get("status")
-
-
-        nome_novo = (
-            dados["title"]["english"]
-            if dados["title"]["english"]
-            else dados["title"]["romaji"]
-        )
-
-
         status_novo = dados["status"]
 
-        episodios_novos = dados["episodes"]
+        # Guardamos o episódio antigo antes de atualizar o objeto.
+        # Ele será usado futuramente para detectar lançamentos novos.
+        episodio_antigo = anime.get(
+            "ultimo_episodio_lancado",
+            anime.get("ultimo_episodio", 0),
+        )
+
+        ultimo_episodio, data_ultimo_episodio = descobrir_ultimo_episodio(
+            dados,
+            anime["id"],
+        )
+
+        categoria, mensagem = criar_aviso_de_status(
+            nome_novo,
+            status_antigo,
+            status_novo,
+        )
+
+        if categoria and mensagem:
+            avisos[categoria].append(mensagem)
 
 
 
-        # ==================================
-        # Descobre último episódio lançado
-        # ==================================
+        mensagem_episodio = criar_aviso_de_episodio(
+            nome_novo,
+            episodio_antigo,
+            ultimo_episodio,
+            data_ultimo_episodio,
+        )
 
-        ultimo_episodio_lancado = 0
-        data_ultimo_episodio = None
-
-
-        if dados["nextAiringEpisode"]:
-
-            ultimo_episodio_lancado = (
-                dados["nextAiringEpisode"]["episode"] - 1
-            )
+        if mensagem_episodio:
+            avisos["episodios"].append(mensagem_episodio)
 
 
-            calendario = buscar_calendario_anime(
-                anime["id"]
-            )
-
-
-            if calendario:
-
-                episodios = (
-                    calendario["airingSchedule"]["nodes"]
-                )
-
-
-                for episodio in episodios:
-
-                    if episodio["episode"] == ultimo_episodio_lancado:
-
-
-                        data = datetime.fromtimestamp(
-                            episodio["airingAt"]
-                        )
-
-
-                        data_ultimo_episodio = (
-                            data.strftime("%d/%m/%Y")
-                        )
-
-
-                        break
-
-
-        elif dados["status"] == "FINISHED":
-
-            ultimo_episodio_lancado = dados["episodes"] or 0
-
-
-
-        # ==================================
-        # Cria histórico para animes antigos
-        # ==================================
-
-        anime["ultimo_episodio_lancado"] = ultimo_episodio_lancado
-
-
-        if data_ultimo_episodio:
-            
-            anime["data_ultimo_episodio"] = data_ultimo_episodio
-
-
-        # ==================================
-        # Verifica mudanças de status
-        # ==================================
-
-        if status_antigo != status_novo:
-
-
-            if status_antigo == "RELEASING" and status_novo == "FINISHED":
-
-                mensagem = (
-                    f"🎉 {nome_novo}\n"
-                    f"A temporada foi finalizada!"
-                )
-
-                avisos["finalizados"].append(mensagem)
-
-
-
-            elif status_antigo == "RELEASING" and status_novo == "HIATUS":
-
-                mensagem = (
-                    f"⏸ {nome_novo}\n"
-                    f"O anime entrou em hiato."
-                )
-
-                avisos["hiato"].append(mensagem)
-
-
-
-            elif status_antigo == "HIATUS" and status_novo == "RELEASING":
-
-                mensagem = (
-                    f"🔥 {nome_novo}\n"
-                    f"O anime voltou do hiato!"
-                )
-
-                avisos["retornos"].append(mensagem)
-
-
-
-            elif status_antigo == "NOT_YET_RELEASED" and status_novo == "RELEASING":
-
-                mensagem = (
-                    f"🚀 {nome_novo}\n"
-                    f"O anime começou a ser lançado!"
-                )
-
-                avisos["outros"].append(mensagem)
-
-
-
-            else:
-
-                mensagem = (
-                    f"🔄 {nome_novo}\n"
-                    f"Status alterado: "
-                    f"{formatar_status(status_antigo)} → "
-                    f"{formatar_status(status_novo)}"
-                )
-
-                avisos["outros"].append(mensagem)
-
-
-
-        # ==================================
-        # Atualiza informações salvas
-        # ==================================
 
         anime["nome"] = nome_novo
-
         anime["tipo"] = dados["format"]
-
-        anime["episodios"] = episodios_novos
-
+        anime["episodios"] = dados["episodes"]
         anime["status"] = status_novo
+        anime["ultimo_episodio_lancado"] = ultimo_episodio
 
+        if data_ultimo_episodio:
+            anime["data_ultimo_episodio"] = data_ultimo_episodio
 
+        # Remove a chave antiga, caso ela ainda exista no JSON.
+        anime.pop("ultimo_episodio", None)
 
     salvar_animes(animes)
-
 
     return avisos
 
 
-
 def adicionar_anime():
-
+    """Pesquisa um anime na API e adiciona a escolha ao JSON."""
     while True:
-
-        nome = input("\nDigite o nome do anime (ou 0 para voltar): ")
-
+        nome = input(
+            "\nDigite o nome do anime (ou 0 para voltar): "
+        ).strip()
 
         if nome == "0":
-
             return
-
 
         resultados = buscar_animes_por_nome(nome)
 
+        if not resultados:
+            print("\nNenhum anime encontrado. Tente novamente.")
+            continue
 
         resultados.sort(
             key=lambda anime: anime["title"]["romaji"]
         )
-
-
-        if not resultados:
-
-            print("\nNenhum anime encontrado. Tente novamente.")
-
-            continue
-
-
         break
 
-
     print("\nResultados encontrados:\n")
+    print("0 - Voltar\n")
 
-    print("0 - Voltar:\n")
+    for indice, anime in enumerate(resultados, start=1):
+        titulo = obter_titulo(anime)
 
-
-    for indice, anime in enumerate(resultados):
-
-        if anime["title"]["english"]:
-            titulo = anime["title"]["english"]
-
-        else:
-            titulo = anime["title"]["romaji"]
-
-        print(f"{indice + 1} - {titulo}")
-
-        print(
-            "   Tipo:",
-            formatar_tipo(anime["format"])
-        )
-
-        print(
-            "   Episódios:",
-            anime["episodes"] or "Não informado"
-        )
-
-        print(
-            "   Status:",
-            formatar_status(anime["status"])
-        )
-
+        print(f"{indice} - {titulo}")
+        print(f"   Tipo: {formatar_tipo(anime['format'])}")
+        print(f"   Episódios: {anime['episodes'] or 'Não informado'}")
+        print(f"   Status: {formatar_status(anime['status'])}")
         print()
 
-
     try:
-
-        escolha = int(
-            input("\nEscolha o anime: ")
-    )
-
+        escolha = int(input("\nEscolha o anime: "))
 
     except ValueError:
-
         print("\nDigite apenas números.")
-
         return
-        
-
 
     if escolha == 0:
-
         return
 
-
-    if escolha < 0 or escolha > len(resultados):
-
+    if escolha < 1 or escolha > len(resultados):
         print("\nOpção inválida.")
-
         return
-
 
     anime_escolhido = resultados[escolha - 1]
-
-
     animes = carregar_animes()
 
-
     for anime in animes:
+        if anime["id"] != anime_escolhido["id"]:
+            continue
 
-        if anime["id"] == anime_escolhido["id"]:
+        print("\n⚠️ Esse anime já foi adicionado!")
 
-            print("\n⚠️ Esse anime já foi adicionado!")
+        detalhes = buscar_anime(anime["id"])
 
-            detalhes = buscar_anime(anime["id"])
+        if detalhes and detalhes["nextAiringEpisode"]:
+            print(
+                "Próximo episódio:",
+                detalhes["nextAiringEpisode"]["episode"],
+            )
 
-            if detalhes["nextAiringEpisode"]:
+        return
+    
+    detalhes = buscar_anime(anime_escolhido["id"])
 
-                print(
-                    "Próximo episódio:",
-                    detalhes["nextAiringEpisode"]["episode"]
-                )
-
-            return
-
-
-
-    if anime_escolhido["title"]["english"]:
-
-        nome_salvar = anime_escolhido["title"]["english"]
-
+    if detalhes:
+        ultimo_episodio, data_ultimo_episodio = descobrir_ultimo_episodio(
+        detalhes,
+        anime_escolhido["id"],
+    )
     else:
-
-        nome_salvar = anime_escolhido["title"]["romaji"]
-
+        ultimo_episodio = 0
+        data_ultimo_episodio = None
 
     novo_anime = {
-        "nome": nome_salvar,
-        "id": anime_escolhido["id"],
-        "tipo": anime_escolhido["format"],
-        "episodios": anime_escolhido["episodes"],
-        "status": anime_escolhido["status"],
-        "ultimo_episodio": 0
+    "nome": obter_titulo(anime_escolhido),
+    "id": anime_escolhido["id"],
+    "tipo": anime_escolhido["format"],
+    "episodios": anime_escolhido["episodes"],
+    "status": anime_escolhido["status"],
+    "ultimo_episodio_lancado": ultimo_episodio,
     }
 
+    if data_ultimo_episodio:
+        novo_anime["data_ultimo_episodio"] = data_ultimo_episodio
 
     animes.append(novo_anime)
-
-
     salvar_animes(animes)
-
 
     print("\n✅ Anime adicionado com sucesso!")
 
-def remover_anime():
 
+def remover_anime():
+    """Mostra os animes cadastrados e permite remover um deles."""
     animes = carregar_animes()
 
-
     if not animes:
-
         print("\nNenhum anime cadastrado.")
         return
 
-
     print("\nAnimes cadastrados:\n")
+    print("0 - Voltar")
 
+    for indice, anime in enumerate(animes, start=1):
+        print(f"{indice} - {anime['nome']}")
 
-    for indice, anime in enumerate(animes):
-
-        print(
-            f"{indice + 1} - {anime['nome']}"
+    try:
+        escolha = int(
+            input("\nEscolha o anime que deseja remover: ")
         )
 
-
-    escolha = int(
-        input("\nEscolha o anime que deseja remover: ")
-    )
-
-
-    if escolha < 1 or escolha > len(animes):
-
-        print("Opção inválida.")
+    except ValueError:
+        print("\nDigite apenas números.")
         return
 
+    if escolha == 0:
+        return
+
+    if escolha < 1 or escolha > len(animes):
+        print("\nOpção inválida.")
+        return
 
     anime_removido = animes[escolha - 1]
-
 
     confirmar = input(
         f"\nTem certeza que deseja remover "
         f"{anime_removido['nome']}? (s/n): "
-    )
+    ).strip().lower()
 
+    if confirmar != "s":
+        print("\nOperação cancelada.")
+        return
 
-    if confirmar.lower() == "s":
+    animes.pop(escolha - 1)
+    salvar_animes(animes)
 
-        animes.pop(escolha - 1)
-
-        salvar_animes(animes)
-
-        print(
-            "\n✅ Anime removido com sucesso!"
-        )
-
-    else:
-
-        print(
-            "\nOperação cancelada."
-        )
+    print("\n✅ Anime removido com sucesso!")

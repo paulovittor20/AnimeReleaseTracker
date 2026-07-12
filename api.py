@@ -2,149 +2,178 @@ import requests
 
 
 URL = "https://graphql.anilist.co"
+TEMPO_LIMITE = 10
+
+
+def executar_consulta(query, variaveis=None):
+    """
+    Envia uma consulta GraphQL para a AniList.
+
+    Retorna o conteúdo da chave 'data' quando a requisição
+    funciona ou None quando ocorre algum problema.
+    """
+    try:
+        resposta = requests.post(
+            URL,
+            json={
+                "query": query,
+                "variables": variaveis or {},
+            },
+            timeout=TEMPO_LIMITE,
+        )
+
+        # Gera uma exceção para respostas HTTP com erro,
+        # como 400, 404, 500 ou 503.
+        resposta.raise_for_status()
+
+        resultado = resposta.json()
+
+        # Uma API GraphQL pode retornar status HTTP 200
+        # e ainda assim informar erros na resposta.
+        if resultado.get("errors"):
+            print("\n⚠️ A AniList retornou um erro na consulta.")
+
+            for erro in resultado["errors"]:
+                print(f"- {erro.get('message', 'Erro desconhecido')}")
+
+            return None
+
+        return resultado.get("data")
+
+    except requests.Timeout:
+        print("\n⚠️ A AniList demorou muito para responder.")
+        return None
+
+    except requests.ConnectionError:
+        print("\n⚠️ Não foi possível conectar à AniList.")
+        print("Verifique sua conexão com a internet.")
+        return None
+
+    except requests.HTTPError as erro:
+        print(f"\n⚠️ Erro HTTP ao consultar a AniList: {erro}")
+        return None
+
+    except requests.RequestException as erro:
+        print(f"\n⚠️ Erro ao consultar a AniList: {erro}")
+        return None
+
+    except ValueError:
+        print("\n⚠️ A AniList retornou uma resposta inválida.")
+        return None
 
 
 def buscar_anime(anime_id):
-
+    """Busca os dados atualizados de um anime pelo ID."""
     query = """
-    query {
-      Media(id: ID, type: ANIME) {
+    query ($id: Int!) {
+        Media(id: $id, type: ANIME) {
+            id
 
-        id
+            title {
+                romaji
+                english
+            }
 
-        title {
-          romaji
-          english
+            format
+            status
+            episodes
+
+            nextAiringEpisode {
+                episode
+                airingAt
+            }
         }
-
-        format
-
-        status
-
-        episodes
-
-        nextAiringEpisode {
-          episode
-          airingAt
-        }
-
-      }
     }
     """
 
-
-    query = query.replace("ID", str(anime_id))
-
-
-    resposta = requests.post(
-        URL,
-        json={"query": query}
+    dados = executar_consulta(
+        query,
+        {"id": anime_id},
     )
 
-
-    if resposta.status_code == 200:
-
-        dados = resposta.json()
-
-        return dados["data"]["Media"]
-
-    else:
-
+    if not dados:
         return None
 
+    return dados.get("Media")
 
 
 def buscar_animes_por_nome(nome):
+    """
+    Pesquisa até dez animes de TV pelo nome informado.
 
+    Retorna uma lista vazia caso a busca falhe
+    ou nenhum resultado seja encontrado.
+    """
     query = """
-    query {
-      Page(perPage: 10) {
+    query ($nome: String!) {
+        Page(perPage: 10) {
+            media(
+                search: $nome
+                type: ANIME
+                format_in: [TV]
+            ) {
+                id
 
-        media(
-          search: "NOME",
-          type: ANIME,
-          format_in: [TV]
-        ) {
+                title {
+                    romaji
+                    english
+                }
 
-          id
-
-          title {
-            romaji
-            english
-          }
-
-          format
-
-          episodes
-
-          status
+                format
+                episodes
+                status
+            }
         }
-      }
     }
     """
 
-
-    query = query.replace("NOME", nome)
-
-
-    resposta = requests.post(
-        URL,
-        json={"query": query}
+    dados = executar_consulta(
+        query,
+        {"nome": nome},
     )
 
-
-    if resposta.status_code == 200:
-
-        dados = resposta.json()
-
-        return dados["data"]["Page"]["media"]
-
-    else:
-
+    if not dados:
         return []
+
+    pagina = dados.get("Page")
+
+    if not pagina:
+        return []
+
+    return pagina.get("media", [])
 
 
 def buscar_calendario_anime(anime_id):
+    """
+    Busca o calendário de lançamento dos episódios de um anime.
 
+    O calendário é usado para descobrir a data em que
+    determinado episódio foi lançado.
+    """
     query = """
-    query {
-      Media(id: ID, type: ANIME) {
+    query ($id: Int!) {
+        Media(id: $id, type: ANIME) {
+            title {
+                romaji
+                english
+            }
 
-        title {
-          romaji
+            airingSchedule {
+                nodes {
+                    episode
+                    airingAt
+                }
+            }
         }
-
-        airingSchedule {
-
-          nodes {
-
-            episode
-            airingAt
-
-          }
-
-        }
-
-      }
     }
     """
 
-
-    query = query.replace("ID", str(anime_id))
-
-
-    resposta = requests.post(
-        URL,
-        json={"query": query}
+    dados = executar_consulta(
+        query,
+        {"id": anime_id},
     )
 
-
-    if resposta.status_code == 200:
-
-        dados = resposta.json()
-
-        return dados["data"]["Media"]
-
-    else:
-
+    if not dados:
         return None
+
+    return dados.get("Media")

@@ -1,317 +1,189 @@
-import json
 from datetime import datetime
-from api import buscar_anime, buscar_calendario_anime 
+
+from anime_manager import carregar_animes
+from api import buscar_anime, buscar_calendario_anime
 
 
-dias = [
-    "segunda",
-    "terça",
-    "quarta",
-    "quinta",
-    "sexta",
+DIAS_DA_SEMANA = [
+    "segunda-feira",
+    "terça-feira",
+    "quarta-feira",
+    "quinta-feira",
+    "sexta-feira",
     "sábado",
-    "domingo"
+    "domingo",
 ]
 
+
 def obter_nome_anime(anime):
+    """
+    Retorna o título em inglês quando disponível.
 
-    if anime["title"]["english"]:
-        return anime["title"]["english"]
+    Caso o título em inglês não exista, utiliza o título em romaji.
+    """
+    return anime["title"]["english"] or anime["title"]["romaji"]
 
-    else:
-        return anime["title"]["romaji"]
-    
+
+def converter_timestamp(timestamp):
+    """Converte um timestamp Unix em um objeto datetime."""
+    return datetime.fromtimestamp(timestamp)
+
 
 def formatar_data(timestamp):
+    """
+    Formata a data de lançamento de um episódio.
 
-    data = datetime.fromtimestamp(timestamp)
-
+    Exemplo:
+    domingo, 12/07 às 18:30
+    """
+    data = converter_timestamp(timestamp)
+    dia_semana = DIAS_DA_SEMANA[data.weekday()]
     data_formatada = data.strftime("%d/%m às %H:%M")
-
-    dia_semana = dias[data.weekday()]
 
     return f"{dia_semana}, {data_formatada}"
 
+
 def episodio_e_hoje(timestamp):
+    """Verifica se o episódio será ou foi lançado hoje."""
+    data_episodio = converter_timestamp(timestamp).date()
+    hoje = datetime.now().date()
 
-    data_episodio = datetime.fromtimestamp(timestamp)
-
-    hoje = datetime.now()
+    return data_episodio == hoje
 
 
-    return (
-        data_episodio.date() == hoje.date()
-    )
+def mostrar_separador():
+    """Exibe um separador entre os animes mostrados no terminal."""
+    print("----------------")
 
 
 def mostrar_episodios_de_hoje():
+    """
+    Mostra os episódios cadastrados que têm lançamento marcado para hoje.
 
-    with open("animes.json", "r", encoding="utf-8") as arquivo:
-        animes = json.load(arquivo)
-
-
+    Informa também se o episódio já foi lançado ou se ainda será lançado
+    mais tarde no mesmo dia.
+    """
+    animes = carregar_animes()
     hoje = datetime.now().date()
-
+    agora = datetime.now()
     encontrados = False
 
+    if not animes:
+        print("\nNenhum anime cadastrado.")
+        return
 
     for anime in animes:
-
-        resultado = buscar_anime(anime["id"])
-
-
-        if resultado is None:
-            continue
-
-
         calendario = buscar_calendario_anime(anime["id"])
 
-
-
-        if calendario is None:
+        # Se a API falhar para um anime, continuamos verificando os demais.
+        if not calendario:
             continue
-
 
         episodios = calendario["airingSchedule"]["nodes"]
 
-
         for episodio in episodios:
-
-            data_episodio = datetime.fromtimestamp(
+            data_episodio = converter_timestamp(
                 episodio["airingAt"]
             )
 
+            if data_episodio.date() != hoje:
+                continue
 
-            if data_episodio.date() == hoje:
+            encontrados = True
 
+            mostrar_separador()
+            print(f"🔥 {obter_nome_anime(calendario)}")
+            print(f"Episódio: {episodio['episode']}")
 
-                encontrados = True
-
-
-                print("----------------")
+            if agora >= data_episodio:
+                print("✅ Episódio lançado hoje!")
                 print(
-                    "🔥",
-                    obter_nome_anime(resultado)
+                    "Lançou às:",
+                    data_episodio.strftime("%H:%M"),
                 )
 
+            else:
                 print(
-                    "Episódio:",
-                    episodio["episode"]
+                    "⏰ Sai hoje às:",
+                    data_episodio.strftime("%H:%M"),
                 )
-
-
-                agora = datetime.now()
-
-
-                if agora >= data_episodio:
-
-                    print(
-                        "✅ Episódio lançado hoje!"
-                    )
-
-                    print(
-                        "Lançou às:",
-                        data_episodio.strftime("%H:%M")
-                    )
-
-                else:
-
-                    print(
-                        "⏰ Sai hoje às:",
-                        data_episodio.strftime("%H:%M")
-                    )
-
-
 
     if not encontrados:
-
-        print(
-            "Nenhum episódio lança hoje."
-        )
+        print("\nNenhum episódio lança hoje.")
 
 
 def mostrar_episodios():
-    with open("animes.json", "r", encoding="utf-8") as arquivo:
-        animes = json.load(arquivo)
+    """
+    Mostra o próximo episódio de cada anime cadastrado.
 
+    Quando não existe um próximo episódio anunciado, mostra o estado
+    atual do anime, como finalizado, em hiato ou sem previsão.
+    """
+    animes = carregar_animes()
+
+    if not animes:
+        print("\nNenhum anime cadastrado.")
+        return
 
     for anime in animes:
-
         resultado = buscar_anime(anime["id"])
 
-        print("----------------")
-        print("Anime:", obter_nome_anime(resultado))
+        # Evita que uma falha temporária da API encerre o programa.
+        if not resultado:
+            mostrar_separador()
+            print(f"Anime: {anime['nome']}")
+            print("⚠️ Não foi possível consultar este anime.")
+            continue
 
+        mostrar_separador()
+        print(f"Anime: {obter_nome_anime(resultado)}")
 
+        proximo_episodio = resultado["nextAiringEpisode"]
 
-
-        if resultado["nextAiringEpisode"]:
-
-            episodio = resultado["nextAiringEpisode"]["episode"]
-
-            timestamp = resultado["nextAiringEpisode"]["airingAt"]
-
-            data_formatada = formatar_data(timestamp)
+        if proximo_episodio:
+            numero_episodio = proximo_episodio["episode"]
+            timestamp = proximo_episodio["airingAt"]
 
             if episodio_e_hoje(timestamp):
                 print("🔥 EPISÓDIO LANÇA HOJE!")
-                
-            print("Próximo episódio:", episodio)
-            print(f"Lançamento: {data_formatada}")
 
-
-        else:
-
-            if resultado["status"] == "FINISHED":
-
-                print("🏁 Anime finalizado")
-
-            elif resultado["status"] == "HIATUS":
-
-                print("⏸️ Anime em hiato")
-
-            else:
-
-                print("Sem próximo episódio anunciado")
-
-        if resultado["episodes"]:
-
-            print(
-                "Total de episódios:",
-                resultado["episodes"]
-            )
+            print(f"Próximo episódio: {numero_episodio}")
+            print(f"Lançamento: {formatar_data(timestamp)}")
 
         else:
+            mostrar_situacao_sem_proximo_episodio(resultado)
 
-            print(
-                "Total de episódios ainda não anunciado"
-            )
-
-def mostrar_episodios_lancados_hoje():
-
-    with open("animes.json", "r", encoding="utf-8") as arquivo:
-        animes = json.load(arquivo)
+        mostrar_total_episodios(resultado)
 
 
-    hoje = datetime.now().date()
+def mostrar_situacao_sem_proximo_episodio(anime):
+    """
+    Explica por que um anime não possui próximo episódio anunciado.
+    """
+    status = anime["status"]
 
-    encontrou = False
+    if status == "FINISHED":
+        print("🏁 Anime finalizado")
 
+    elif status == "HIATUS":
+        print("⏸️ Anime em hiato")
 
-    for anime in animes:
+    elif status == "NOT_YET_RELEASED":
+        print("⏳ Anime ainda não lançado")
 
-        calendario = buscar_calendario_anime(anime["id"])
+    elif status == "CANCELLED":
+        print("❌ Anime cancelado")
 
-
-        if calendario is None:
-            continue
-
-
-        episodios = calendario["airingSchedule"]["nodes"]
-
-
-        for episodio in episodios:
-
-
-            data_episodio = datetime.fromtimestamp(
-                episodio["airingAt"]
-            )
+    else:
+        print("Sem próximo episódio anunciado")
 
 
-            if data_episodio.date() == hoje:
+def mostrar_total_episodios(anime):
+    """Mostra o total de episódios do anime, quando informado pela API."""
+    total_episodios = anime["episodes"]
 
-                encontrou = True
+    if total_episodios:
+        print(f"Total de episódios: {total_episodios}")
 
-
-                print("----------------")
-                print("🔥", obter_nome_anime(calendario))
-                print(
-                    "Episódio:",
-                    episodio["episode"]
-                )
-                print(
-                    "Lançou às:",
-                    data_episodio.strftime("%H:%M")
-                )
-
-
-    if not encontrou:
-
-        print(
-            "Nenhum episódio lançado hoje."
-        )
-
-def verificar_status_animes():
-
-    with open("animes.json", "r", encoding="utf-8") as arquivo:
-        animes = json.load(arquivo)
-
-
-    encontrou = False
-
-
-    for anime in animes:
-
-        resultado = buscar_anime(anime["id"])
-
-
-        if resultado is None:
-            continue
-
-
-        status = resultado["status"]
-
-
-        if status == "FINISHED":
-
-            encontrou = True
-
-            print("----------------")
-            print("🏁 Temporada finalizada!")
-            print(
-                 obter_nome_anime(resultado)
-            )
-
-            print(
-                "Total de episódios:",
-                resultado["episodes"]
-            )
-
-
-        elif status == "HIATUS":
-
-            encontrou = True
-
-            print("----------------")
-            print("⏸️ Anime em hiato!")
-            print(
-                 obter_nome_anime(resultado)
-            )
-
-
-            if resultado["nextAiringEpisode"]:
-
-                data = datetime.fromtimestamp(
-                    resultado["nextAiringEpisode"]["airingAt"]
-                )
-
-
-                print(
-                    "Retorno previsto:",
-                    data.strftime("%d/%m às %H:%M")
-                )
-
-            else:
-
-                print(
-                    "Sem data de retorno anunciada."
-                )
-
-
-    if not encontrou:
-
-        print(
-            "Nenhum anime finalizado ou em hiato."
-        )
-
-        
+    else:
+        print("Total de episódios ainda não anunciado")
