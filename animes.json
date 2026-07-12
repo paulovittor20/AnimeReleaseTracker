@@ -1,0 +1,47 @@
+[
+    {
+        "nome": "Mushoku Tensei: Jobless Reincarnation Season 3",
+        "id": 178789,
+        "tipo": "TV",
+        "episodios": 14,
+        "status": "RELEASING",
+        "ultimo_episodio_lancado": 3,
+        "data_ultimo_episodio": "12/07/2026"
+    },
+    {
+        "nome": "BLACK TORCH",
+        "id": 187538,
+        "tipo": "TV",
+        "episodios": null,
+        "status": "RELEASING",
+        "ultimo_episodio_lancado": 2,
+        "data_ultimo_episodio": "11/07/2026"
+    },
+    {
+        "nome": "Re:ZERO -Starting Life in Another World- Season 4",
+        "id": 189046,
+        "tipo": "TV",
+        "episodios": 19,
+        "status": "RELEASING",
+        "ultimo_episodio_lancado": 11,
+        "data_ultimo_episodio": "17/06/2026"
+    },
+    {
+        "nome": "That Time I Got Reincarnated as a Slime Season 4",
+        "id": 182205,
+        "tipo": "TV",
+        "episodios": null,
+        "status": "RELEASING",
+        "ultimo_episodio_lancado": 14,
+        "data_ultimo_episodio": "10/07/2026"
+    },
+    {
+        "nome": "Naruto: Shippuden",
+        "id": 1735,
+        "tipo": "TV",
+        "episodios": 500,
+        "status": "FINISHED",
+        "ultimo_episodio_lancado": 500,
+        "data_ultimo_episodio": null
+    }
+]
