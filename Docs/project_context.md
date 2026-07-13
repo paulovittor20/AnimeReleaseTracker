@@ -153,6 +153,10 @@ Nenhum outro módulo deve acessar APIs diretamente.
 
 Sistema de notificações.
 
+Função "Historico de Atualizações".
+
+Separação de Animes Ativos e Animes Finalizados.
+
 Problema identificado:
 
 Quando um episódio novo é encontrado, o sistema atualiza o JSON corretamente, porém o usuário não recebe um aviso claro informando que houve um novo lançamento.
@@ -261,3 +265,9 @@ Este documento é um registro vivo do desenvolvimento.
 Sempre que uma decisão importante for tomada ou uma funcionalidade relevante for concluída, este arquivo deve ser atualizado.
 
 O objetivo não é documentar tudo, mas preservar o contexto necessário para continuar o projeto em qualquer momento.
+
+
+a organização dos arquivos foi concluída;
+o aviso de novos episódios foi implementado;
+a chave usada agora é ultimo_episodio_lancado;
+o próximo foco será histórico de alterações.

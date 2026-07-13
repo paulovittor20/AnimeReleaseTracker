@@ -2,6 +2,7 @@ from datetime import datetime
 
 from anime_manager import carregar_animes
 from api import buscar_anime, buscar_calendario_anime
+from utils import obter_titulo
 
 
 DIAS_DA_SEMANA = [
@@ -13,16 +14,6 @@ DIAS_DA_SEMANA = [
     "sábado",
     "domingo",
 ]
-
-
-def obter_nome_anime(anime):
-    """
-    Retorna o título em inglês quando disponível.
-
-    Caso o título em inglês não exista, utiliza o título em romaji.
-    """
-    return anime["title"]["english"] or anime["title"]["romaji"]
-
 
 def converter_timestamp(timestamp):
     """Converte um timestamp Unix em um objeto datetime."""
@@ -60,24 +51,31 @@ def mostrar_episodios_de_hoje():
     """
     Mostra os episódios cadastrados que têm lançamento marcado para hoje.
 
-    Informa também se o episódio já foi lançado ou se ainda será lançado
-    mais tarde no mesmo dia.
+    Informa se o episódio já foi lançado ou se ainda será lançado.
+    Se uma consulta falhar, a operação é interrompida para não informar
+    incorretamente que não existem episódios no dia.
     """
     animes = carregar_animes()
-    hoje = datetime.now().date()
-    agora = datetime.now()
-    encontrados = False
 
     if not animes:
         print("\nNenhum anime cadastrado.")
         return
 
+    hoje = datetime.now().date()
+    agora = datetime.now()
+    encontrados = False
+
     for anime in animes:
         calendario = buscar_calendario_anime(anime["id"])
 
-        # Se a API falhar para um anime, continuamos verificando os demais.
+        # Sem os dados da API, não podemos afirmar
+        # se existem ou não episódios marcados para hoje.
         if not calendario:
-            continue
+            print(
+                "\n⚠️ Não foi possível verificar "
+                "os episódios de hoje."
+            )
+            return
 
         episodios = calendario["airingSchedule"]["nodes"]
 
@@ -92,7 +90,7 @@ def mostrar_episodios_de_hoje():
             encontrados = True
 
             mostrar_separador()
-            print(f"🔥 {obter_nome_anime(calendario)}")
+            print(f"🔥 {obter_titulo(calendario)}")
             print(f"Episódio: {episodio['episode']}")
 
             if agora >= data_episodio:
@@ -111,13 +109,12 @@ def mostrar_episodios_de_hoje():
     if not encontrados:
         print("\nNenhum episódio lança hoje.")
 
-
 def mostrar_episodios():
     """
     Mostra o próximo episódio de cada anime cadastrado.
 
-    Quando não existe um próximo episódio anunciado, mostra o estado
-    atual do anime, como finalizado, em hiato ou sem previsão.
+    Se uma consulta falhar, a operação é interrompida para evitar
+    repetir a mesma mensagem de erro para todos os animes.
     """
     animes = carregar_animes()
 
@@ -128,15 +125,18 @@ def mostrar_episodios():
     for anime in animes:
         resultado = buscar_anime(anime["id"])
 
-        # Evita que uma falha temporária da API encerre o programa.
+        # A função da API já informa o motivo da falha.
+        # Aqui apenas interrompemos o loop para evitar
+        # repetir a mesma mensagem para todos os animes.
         if not resultado:
-            mostrar_separador()
-            print(f"Anime: {anime['nome']}")
-            print("⚠️ Não foi possível consultar este anime.")
-            continue
+            print(
+                "\n⚠️ Não foi possível carregar "
+                "os próximos episódios."
+            )
+            return
 
         mostrar_separador()
-        print(f"Anime: {obter_nome_anime(resultado)}")
+        print(f"Anime: {obter_titulo(resultado)}")
 
         proximo_episodio = resultado["nextAiringEpisode"]
 

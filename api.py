@@ -4,7 +4,8 @@ import requests
 URL = "https://graphql.anilist.co"
 TEMPO_LIMITE = 10
 
-
+# evita repetir a mesma mensagem para cada anime
+# quando a conexçao com a internet estiver indisponível
 def executar_consulta(query, variaveis=None):
     """
     Envia uma consulta GraphQL para a AniList.
@@ -12,6 +13,7 @@ def executar_consulta(query, variaveis=None):
     Retorna o conteúdo da chave 'data' quando a requisição
     funciona ou None quando ocorre algum problema.
     """
+
     try:
         resposta = requests.post(
             URL,
@@ -45,9 +47,9 @@ def executar_consulta(query, variaveis=None):
         return None
 
     except requests.ConnectionError:
-        print("\n⚠️ Não foi possível conectar à AniList.")
-        print("Verifique sua conexão com a internet.")
-        return None
+            print("\n⚠️ Não foi possível conectar à AniList.")
+            print("Verifique sua conexão com a internet.")
+            return None
 
     except requests.HTTPError as erro:
         print(f"\n⚠️ Erro HTTP ao consultar a AniList: {erro}")
@@ -101,8 +103,10 @@ def buscar_animes_por_nome(nome):
     """
     Pesquisa até dez animes de TV pelo nome informado.
 
-    Retorna uma lista vazia caso a busca falhe
-    ou nenhum resultado seja encontrado.
+    Retorna:
+    - uma lista com os resultados;
+    - uma lista vazia quando nenhum anime é encontrado;
+    - None quando a consulta falha.
     """
     query = """
     query ($nome: String!) {
@@ -132,8 +136,9 @@ def buscar_animes_por_nome(nome):
         {"nome": nome},
     )
 
-    if not dados:
-        return []
+    # None significa que a consulta falhou.
+    if dados is None:
+        return None
 
     pagina = dados.get("Page")
 

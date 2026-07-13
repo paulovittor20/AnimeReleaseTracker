@@ -1,6 +1,12 @@
 import json
 from datetime import datetime
 from pathlib import Path
+from api import (
+    buscar_anime,
+    buscar_animes_por_nome,
+    buscar_calendario_anime,
+)
+from utils import obter_titulo, formatar_tipo, formatar_status
 
 from api import (
     buscar_anime,
@@ -12,45 +18,7 @@ from api import (
 # O caminho é baseado na localização deste arquivo.
 # Assim, o JSON continua sendo encontrado mesmo que o programa
 # seja executado a partir de outra pasta.
-ARQUIVO = Path(__file__).with_name("animes.json")
-
-
-def obter_titulo(anime):
-    """
-    Retorna o título em inglês quando disponível.
-
-    Caso a API não tenha um título em inglês,
-    utiliza o título original em romaji.
-    """
-    return anime["title"]["english"] or anime["title"]["romaji"]
-
-
-def formatar_tipo(tipo):
-    """Converte o tipo retornado pela API para um nome mais amigável."""
-    tipos = {
-        "TV": "Anime de TV",
-        "ONA": "Anime Online",
-        "OVA": "Especial OVA",
-        "MOVIE": "Filme",
-        "SPECIAL": "Especial",
-        "MUSIC": "Clipe Musical",
-    }
-
-    return tipos.get(tipo, "Outro")
-
-
-def formatar_status(status):
-    """Converte o status retornado pela API para português."""
-    status_nomes = {
-        "RELEASING": "Em lançamento",
-        "FINISHED": "Finalizado",
-        "HIATUS": "Em hiato",
-        "NOT_YET_RELEASED": "Ainda não lançado",
-        "CANCELLED": "Cancelado",
-    }
-
-    return status_nomes.get(status, "Desconhecido")
-
+ARQUIVO = Path(__file__).parent / "data" / "animes.json"
 
 def carregar_animes():
     """Carrega e devolve a lista de animes salva no JSON."""
@@ -218,7 +186,7 @@ def atualizar_animes():
 
         # Se a API falhar para um anime, os outros continuam sendo atualizados.
         if not dados:
-            continue
+            break
 
         nome_novo = obter_titulo(dados)
         status_antigo = anime.get("status")
@@ -288,9 +256,14 @@ def adicionar_anime():
 
         resultados = buscar_animes_por_nome(nome)
 
+        if resultados is None:
+            print("\n⚠️ Não foi possível realizar a pesquisa.")
+            return
+        
         if not resultados:
-            print("\nNenhum anime encontrado. Tente novamente.")
+            print("\nNenhum resultado encontrado. Tente outro nome.")
             continue
+
 
         resultados.sort(
             key=lambda anime: anime["title"]["romaji"]
