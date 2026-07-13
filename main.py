@@ -1,7 +1,11 @@
 import os
 
 from anime_manager import adicionar_anime, atualizar_animes, remover_anime
-from tracker import mostrar_episodios, mostrar_episodios_de_hoje
+from tracker import(
+     mostrar_episodios,
+    mostrar_episodios_de_hoje,
+    mostrar_meus_animes,
+    )
 
 
 def limpar_tela():
@@ -71,10 +75,50 @@ def menu():
 
     print("1 - Ver próximos episódios")
     print("2 - Adicionar anime")
-    print("3 - Episódios de hoje")
-    print("4 - Remover anime")
-    print("5 - Sair")
+    print("3 - Meus animes")
+    print("4 - Episódios de hoje")
+    print("5 - Remover anime")
+    print("0 - Sair")
 
+
+def menu_meus_animes():
+    """Exibe os filtros disponíveis para a biblioteca do usuário."""
+
+    while True:
+        limpar_tela()
+
+        print("======================")
+        print("      Meus animes")
+        print("======================")
+        print("1 - Todos")
+        print("2 - Em lançamento")
+        print("3 - Finalizados")
+        print("4 - Em hiato")
+        print("0 - Voltar")
+
+        opcao = input("\nEscolha uma opção: ").strip()
+
+        limpar_tela()
+
+        if opcao == "1":
+            mostrar_meus_animes()
+
+        elif opcao == "2":
+            mostrar_meus_animes("RELEASING")
+
+        elif opcao == "3":
+            mostrar_meus_animes("FINISHED")
+
+        elif opcao == "4":
+            mostrar_meus_animes("HIATUS")
+
+        elif opcao == "0":
+            break
+
+        else:
+            print("\n⚠️ Opção inválida. Escolha um número de 0 a 4.")
+
+        input("\nPressione ENTER para continuar...")
 
 def executar_programa():
     """Inicializa o tracker e mantém o menu principal em execução."""
@@ -99,12 +143,15 @@ def executar_programa():
             adicionar_anime()
 
         elif opcao == "3":
-            mostrar_episodios_de_hoje()
+            menu_meus_animes()
 
         elif opcao == "4":
-            remover_anime()
+            mostrar_episodios_de_hoje()
 
         elif opcao == "5":
+            remover_anime()
+
+        elif opcao == "0":
             print("\nAté mais!")
             break
 

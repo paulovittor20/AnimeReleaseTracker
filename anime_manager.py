@@ -231,6 +231,14 @@ def atualizar_animes():
         anime["tipo"] = dados["format"]
         anime["episodios"] = dados["episodes"]
         anime["status"] = status_novo
+
+        data_finalizacao = dados.get("endDate")
+
+        if status_novo == "FINISHED" and data_finalizacao:
+            anime["data_finalizacao"] = data_finalizacao
+        else:
+            anime.pop("data_finalizacao", None)
+
         anime["ultimo_episodio_lancado"] = ultimo_episodio
 
         if data_ultimo_episodio:
@@ -334,6 +342,10 @@ def adicionar_anime():
     "status": anime_escolhido["status"],
     "ultimo_episodio_lancado": ultimo_episodio,
     }
+    data_finalizacao = detalhes.get("endDate")
+
+    if detalhes["status"] == "FINISHED" and data_finalizacao:
+        novo_anime["data_finalizacao"] = data_finalizacao
 
     if data_ultimo_episodio:
         novo_anime["data_ultimo_episodio"] = data_ultimo_episodio

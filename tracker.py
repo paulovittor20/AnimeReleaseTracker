@@ -2,7 +2,13 @@ from datetime import datetime
 
 from anime_manager import carregar_animes
 from api import buscar_anime, buscar_calendario_anime
-from utils import obter_titulo
+from utils import (
+     obter_titulo,
+     formatar_status,
+     titulo,
+     obter_icone_status,
+)
+
 
 
 DIAS_DA_SEMANA = [
@@ -118,6 +124,12 @@ def mostrar_episodios():
     """
     animes = carregar_animes()
 
+    animes = [
+        anime
+        for anime in animes
+        if anime.get("status") == "RELEASING"
+    ]
+
     if not animes:
         print("\nNenhum anime cadastrado.")
         return
@@ -187,3 +199,82 @@ def mostrar_total_episodios(anime):
 
     else:
         print("Total de episódios ainda não anunciado")
+
+
+def mostrar_meus_animes(status_filtro=None):
+    """
+    Mostra os animes cadastrados.
+
+    Quando status_filtro for informado, exibe apenas
+    os animes que possuem aquele status.
+    """
+    animes = carregar_animes()
+
+    if not animes:
+        print("\nNenhum anime cadastrado.")
+        return
+
+    if status_filtro:
+        animes = [
+            anime
+            for anime in animes
+            if anime.get("status") == status_filtro
+        ]
+
+    if not animes:
+        print("\nNenhum anime encontrado nessa categoria.")
+        return
+
+    animes.sort(key=lambda anime: anime["nome"].lower())
+
+    for anime in animes:
+        if status_filtro == "FINISHED":
+            mostrar_anime_finalizado(anime)
+            continue
+
+        status = anime.get("status")
+        icone = obter_icone_status(status)
+
+        titulo(f"{icone} {anime['nome']}")
+
+        print(f"Status: {formatar_status(status)}")
+
+        total_episodios = anime.get("episodios")
+
+        if total_episodios is not None:
+            print(f"Total de episódios: {total_episodios}")
+        else:
+            print("Total de episódios ainda não anunciado")
+
+        print("----------------------")
+
+
+def mostrar_anime_finalizado(anime):
+    """Exibe os dados de um anime finalizado."""
+
+    icone = obter_icone_status(anime.get("status"))
+
+    titulo(f"{icone} {anime['nome']}")
+
+    total_episodios = anime.get("episodios")
+
+    if total_episodios is not None:
+        print(f"Total de episódios: {total_episodios}")
+    else:
+        print("Total de episódios: não informado")
+
+    data_finalizacao = anime.get("data_finalizacao")
+
+    if data_finalizacao:
+        dia = data_finalizacao.get("day")
+        mes = data_finalizacao.get("month")
+        ano = data_finalizacao.get("year")
+
+        if dia and mes and ano:
+            print(f"Finalizado em: {dia:02d}/{mes:02d}/{ano}")
+        else:
+            print("Finalizado em: data não informada")
+    else:
+        print("Finalizado em: data não informada")
+
+    print("----------------------")

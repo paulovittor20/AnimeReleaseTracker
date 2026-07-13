@@ -79,6 +79,11 @@ def buscar_anime(anime_id):
             format
             status
             episodes
+            endDate {
+                year
+                month
+                day
+            }
 
             nextAiringEpisode {
                 episode

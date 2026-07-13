@@ -42,6 +42,24 @@
         "episodios": 500,
         "status": "FINISHED",
         "ultimo_episodio_lancado": 500,
-        "data_ultimo_episodio": null
+        "data_ultimo_episodio": null,
+        "data_finalizacao": {
+            "year": 2017,
+            "month": 3,
+            "day": 23
+        }
+    },
+    {
+        "nome": "Hunter x Hunter (2011)",
+        "id": 11061,
+        "tipo": "TV",
+        "episodios": 148,
+        "status": "FINISHED",
+        "ultimo_episodio_lancado": 148,
+        "data_finalizacao": {
+            "year": 2014,
+            "month": 9,
+            "day": 24
+        }
     }
 ]

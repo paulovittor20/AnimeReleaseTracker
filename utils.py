@@ -39,3 +39,34 @@ def formatar_status(status):
     }
 
     return status_nomes.get(status, "Desconhecido")
+
+def negrito(texto):
+    """Retorna um texto em negrito utilizando códigos ANSI."""
+    return f"\033[1m{texto}\033[0m"
+
+
+def separador_titulo():
+    """Retorna um separador para destacar títulos."""
+    return "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+
+
+def titulo(texto):
+    """Exibe um título destacado no terminal."""
+    print(separador_titulo())
+    print(negrito(texto))
+    print(separador_titulo())
+
+def obter_icone_status(status):
+    """
+    Retorna o ícone correspondente ao status do anime.
+    """
+
+    icones = {
+        "RELEASING": "🟢",
+        "FINISHED": "🏁",
+        "HIATUS": "⏸️",
+        "NOT_YET_RELEASED": "📅",
+        "CANCELLED": "❌",
+    }
+
+    return icones.get(status, "📺")
