@@ -61,5 +61,45 @@
             "month": 9,
             "day": 24
         }
+    },
+    {
+        "nome": "Gurren Lagann",
+        "id": 2001,
+        "tipo": "TV",
+        "episodios": 27,
+        "status": "FINISHED",
+        "ultimo_episodio_lancado": 27,
+        "data_finalizacao": {
+            "year": 2007,
+            "month": 9,
+            "day": 30
+        }
+    },
+    {
+        "nome": "Saga of Tanya the Evil Season 2",
+        "id": 135865,
+        "tipo": "TV",
+        "episodios": 12,
+        "status": "RELEASING",
+        "ultimo_episodio_lancado": 1,
+        "data_ultimo_episodio": "08/07/2026"
+    },
+    {
+        "nome": "Love Unseen Beneath the Clear Night Sky",
+        "id": 202269,
+        "tipo": "TV",
+        "episodios": null,
+        "status": "RELEASING",
+        "ultimo_episodio_lancado": 2,
+        "data_ultimo_episodio": "13/07/2026"
+    },
+    {
+        "nome": "Jaadugar: A Witch in Mongolia",
+        "id": 190569,
+        "tipo": "TV",
+        "episodios": null,
+        "status": "RELEASING",
+        "ultimo_episodio_lancado": 3,
+        "data_ultimo_episodio": "11/07/2026"
     }
 ]

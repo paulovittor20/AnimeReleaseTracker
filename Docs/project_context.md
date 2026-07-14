@@ -14,7 +14,7 @@
 
 # Objetivo Principal
 
-Desenvolver um sistema em Python para acompanhar animes automaticamente, consultando APIs para verificar mudanças de status e lançamento de episódios.
+Desenvolver um sistema em Python para acompanhar lançamentos de animes automaticamente, consultando a API da AniList para verificar mudanças de status e lançamento de episódios.
 
 O projeto tem como prioridade a lógica do sistema. A interface gráfica será desenvolvida apenas quando toda a estrutura principal estiver estável.
 
@@ -32,7 +32,9 @@ Sempre priorizar:
 * Evitar otimizações prematuras
 * Implementar uma funcionalidade por vez
 
-Não tentar transformar o projeto em algo extremamente complexo antes da hora.
+Sempre discutir a solução antes de implementá-la.
+
+Não adicionar funcionalidades ou abstrações sem uma necessidade real.
 
 ---
 
@@ -43,16 +45,25 @@ main.py
 anime_manager.py
 tracker.py
 api.py
-animes.json
+utils.py
+
+data/
+└── animes.json
+
+docs/
+├── ARCHITECTURE.md
+└── PROJECT_CONTEXT.md
 ```
 
 ## Responsabilidade de cada arquivo
 
 ### main.py
 
+Responsável por:
+
 * Menu principal
 * Entrada do usuário
-* Chamada das funcionalidades
+* Navegação entre funcionalidades
 
 ---
 
@@ -60,10 +71,10 @@ animes.json
 
 Responsável por:
 
-* adicionar anime
-* remover anime
-* listar animes
-* manipular o arquivo JSON
+* Adicionar anime
+* Remover anime
+* Atualizar biblioteca
+* Manipular o arquivo JSON
 
 ---
 
@@ -71,10 +82,11 @@ Responsável por:
 
 Responsável por:
 
-* verificar mudanças nos animes
-* atualizar episódios
-* atualizar status
-* controlar histórico de alterações
+* Exibir próximos episódios
+* Exibir episódios lançados no dia
+* Exibir a biblioteca do usuário
+* Filtrar animes por status
+* Apresentar informações ao usuário
 
 ---
 
@@ -82,15 +94,29 @@ Responsável por:
 
 Responsável por:
 
-* comunicação com APIs externas
-* tratamento das respostas
-* padronização dos dados recebidos
+* Comunicação com a API da AniList
+* Tratamento das respostas
+* Padronização dos dados recebidos
+
+---
+
+### utils.py
+
+Responsável por funções reutilizáveis do projeto.
+
+Exemplos:
+
+* Formatação de status
+* Ícones por status
+* Títulos do terminal
+* Separadores
+* Funções auxiliares
 
 ---
 
 ### animes.json
 
-Banco de dados temporário.
+Armazenamento atual da biblioteca.
 
 Será substituído futuramente por SQLite.
 
@@ -106,13 +132,15 @@ JSON
 
 Motivo:
 
-* facilidade
-* aprendizado
-* desenvolvimento rápido
+* Facilidade
+* Aprendizado
+* Desenvolvimento rápido
 
 Futuro:
 
 SQLite
+
+Quando a migração acontecer, será reavaliada a criação de funções genéricas para filtros por status, evitando abstração prematura na versão atual.
 
 ---
 
@@ -128,11 +156,19 @@ Toda a lógica precisa estar pronta antes.
 
 ## APIs
 
-Toda comunicação deve passar pelo arquivo:
+Toda comunicação deve passar por:
 
-api.py
+`api.py`
 
 Nenhum outro módulo deve acessar APIs diretamente.
+
+---
+
+## Organização da biblioteca
+
+A biblioteca possui uma única área chamada **Meus Animes**.
+
+Os diferentes status são exibidos através de filtros internos, evitando duplicação de menus e reutilizando a mesma lógica de listagem.
 
 ---
 
@@ -141,27 +177,33 @@ Nenhum outro módulo deve acessar APIs diretamente.
 ## Implementado
 
 * Cadastro de animes
-* Remoção
-* Listagem
-* Consulta à API
-* Atualização do status
-* Atualização do número de episódios
+* Remoção de animes
+* Atualização automática da biblioteca
+* Consulta à API da AniList
+* Detecção de novos episódios
+* Avisos de mudanças de status
+* Avisos de novos episódios
+* Organização da biblioteca por status
+* Exibição da data oficial de finalização
+* Chave `ultimo_episodio_lancado`
+* Interface do terminal reorganizada
 
 ---
 
-## Em desenvolvimento
+## Próxima funcionalidade
 
-Sistema de notificações.
+Central de Histórico de Alterações.
 
-Função "Historico de Atualizações".
+Objetivo:
 
-Separação de Animes Ativos e Animes Finalizados.
+Registrar todas as alterações detectadas pelo tracker, como:
 
-Problema identificado:
+* Novos episódios
+* Mudanças de status
+* Finalização de temporadas
+* Retorno de hiato
 
-Quando um episódio novo é encontrado, o sistema atualiza o JSON corretamente, porém o usuário não recebe um aviso claro informando que houve um novo lançamento.
-
-Essa será a próxima funcionalidade implementada.
+Essa funcionalidade será implementada após a migração para SQLite, pois depende de um armazenamento estruturado.
 
 ---
 
@@ -169,14 +211,13 @@ Essa será a próxima funcionalidade implementada.
 
 ## Etapa 1
 
-Finalizar toda a lógica.
+Finalizar a lógica principal.
 
 Inclui:
 
-* notificações
-* histórico
-* melhorias internas
-* tratamento de erros
+* Melhorias internas
+* Tratamento de erros
+* Pequenas refatorações
 
 ---
 
@@ -186,9 +227,9 @@ Melhorar desempenho.
 
 Inclui:
 
-* cache
-* reutilização de dados
-* otimização das consultas
+* Cache
+* Reutilização de dados
+* Otimização das consultas
 
 ---
 
@@ -208,7 +249,13 @@ SQLite
 
 ## Etapa 4
 
-Criar interface.
+Implementar a Central de Histórico de Alterações.
+
+---
+
+## Etapa 5
+
+Criar interface gráfica.
 
 Possibilidades:
 
@@ -224,25 +271,26 @@ A decisão será tomada futuramente.
 
 Sempre que possível:
 
-* funções pequenas
-* nomes descritivos
-* evitar repetição de código
-* comentar apenas quando necessário
+* Funções pequenas
+* Nomes descritivos
+* Evitar repetição de código
+* Comentar apenas quando necessário
+
+Refatorações devem acontecer somente quando trouxerem benefícios reais ao projeto.
 
 ---
 
 # Forma de Desenvolvimento
 
-O projeto será desenvolvido em pequenas etapas.
-
 Fluxo adotado:
 
-1. Escolher uma funcionalidade.
+1. Discutir a funcionalidade.
 2. Entender o problema.
-3. Implementar.
-4. Testar.
-5. Atualizar este documento.
-6. Fazer commit no Git.
+3. Definir a melhor solução.
+4. Implementar.
+5. Testar.
+6. Atualizar a documentação.
+7. Fazer commit no Git.
 
 ---
 
@@ -252,9 +300,9 @@ Ao iniciar uma nova conversa:
 
 1. Enviar este arquivo (`PROJECT_CONTEXT.md`).
 2. Enviar o `README.md`.
-3. Informar, se necessário, quais arquivos do projeto mudaram desde a última atualização.
+3. Informar quais arquivos mudaram desde a última atualização, se houver.
 
-Com esses documentos, o contexto do projeto pode ser retomado rapidamente sem depender do histórico da conversa.
+Com esses documentos, o desenvolvimento pode continuar rapidamente sem depender do histórico da conversa.
 
 ---
 
@@ -262,12 +310,6 @@ Com esses documentos, o contexto do projeto pode ser retomado rapidamente sem de
 
 Este documento é um registro vivo do desenvolvimento.
 
-Sempre que uma decisão importante for tomada ou uma funcionalidade relevante for concluída, este arquivo deve ser atualizado.
+Sempre que uma decisão arquitetural importante for tomada ou uma funcionalidade relevante for concluída, este arquivo deve ser atualizado.
 
 O objetivo não é documentar tudo, mas preservar o contexto necessário para continuar o projeto em qualquer momento.
-
-
-a organização dos arquivos foi concluída;
-o aviso de novos episódios foi implementado;
-a chave usada agora é ultimo_episodio_lancado;
-o próximo foco será histórico de alterações.

@@ -6,13 +6,12 @@ from api import (
     buscar_animes_por_nome,
     buscar_calendario_anime,
 )
-from utils import obter_titulo, formatar_tipo, formatar_status
-
-from api import (
-    buscar_anime,
-    buscar_animes_por_nome,
-    buscar_calendario_anime,
+from utils import (
+    obter_titulo,
+    formatar_tipo, 
+    formatar_status,
 )
+
 
 
 # O caminho é baseado na localização deste arquivo.
@@ -48,7 +47,10 @@ def salvar_animes(animes):
         )
 
 
-def descobrir_ultimo_episodio(dados, anime_id):
+def descobrir_ultimo_episodio(
+        dados, 
+        anime_id,
+        ):
     """
     Descobre o último episódio já lançado e sua data.
 
@@ -63,7 +65,7 @@ def descobrir_ultimo_episodio(dados, anime_id):
     if proximo_episodio:
         ultimo_episodio = proximo_episodio["episode"] - 1
 
-        calendario = buscar_calendario_anime(anime_id)
+        calendario = buscar_calendario_anime(anime_id,)
 
         if calendario:
             episodios = calendario["airingSchedule"]["nodes"]
@@ -182,11 +184,14 @@ def atualizar_animes():
     }
 
     for anime in animes:
-        dados = buscar_anime(anime["id"])
+        dados = buscar_anime(
+            anime["id"],
+            forcar_atualizacao=True,
+        )
 
         # Se a API falhar para um anime, os outros continuam sendo atualizados.
         if not dados:
-            break
+            continue
 
         nome_novo = obter_titulo(dados)
         status_antigo = anime.get("status")
@@ -202,7 +207,7 @@ def atualizar_animes():
         ultimo_episodio, data_ultimo_episodio = descobrir_ultimo_episodio(
             dados,
             anime["id"],
-        )
+            )
 
         categoria, mensagem = criar_aviso_de_status(
             nome_novo,

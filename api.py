@@ -1,5 +1,5 @@
 import requests
-
+from cache import buscar_cache, atualizar_cache
 
 URL = "https://graphql.anilist.co"
 TEMPO_LIMITE = 10
@@ -64,8 +64,16 @@ def executar_consulta(query, variaveis=None):
         return None
 
 
-def buscar_anime(anime_id):
-    """Busca os dados atualizados de um anime pelo ID."""
+def buscar_anime(anime_id, forcar_atualizacao=False):
+    """Busca os dados de um anime pelo ID."""
+    chave_cache = f"anime:{anime_id}"
+
+    if not forcar_atualizacao:
+        dados_cache = buscar_cache(chave_cache)
+
+        if dados_cache:
+            return dados_cache
+
     query = """
     query ($id: Int!) {
         Media(id: $id, type: ANIME) {
@@ -79,6 +87,7 @@ def buscar_anime(anime_id):
             format
             status
             episodes
+
             endDate {
                 year
                 month
@@ -101,7 +110,12 @@ def buscar_anime(anime_id):
     if not dados:
         return None
 
-    return dados.get("Media")
+    anime = dados.get("Media")
+
+    if anime:
+        atualizar_cache(chave_cache, anime)
+
+    return anime
 
 
 def buscar_animes_por_nome(nome):
@@ -153,13 +167,11 @@ def buscar_animes_por_nome(nome):
     return pagina.get("media", [])
 
 
-def buscar_calendario_anime(anime_id):
+def buscar_calendario_anime(anime_id,):
     """
     Busca o calendário de lançamento dos episódios de um anime.
-
-    O calendário é usado para descobrir a data em que
-    determinado episódio foi lançado.
     """
+
     query = """
     query ($id: Int!) {
         Media(id: $id, type: ANIME) {
@@ -186,4 +198,6 @@ def buscar_calendario_anime(anime_id):
     if not dados:
         return None
 
-    return dados.get("Media")
+    calendario = dados.get("Media")
+
+    return calendario
