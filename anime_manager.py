@@ -1,6 +1,8 @@
-import json
 from datetime import datetime
-from pathlib import Path
+from database import (
+    buscar_todos_animes,
+    salvar_todos_animes,
+)
 from api import (
     buscar_anime,
     buscar_animes_por_nome,
@@ -14,37 +16,18 @@ from utils import (
 
 
 
-# O caminho é baseado na localização deste arquivo.
-# Assim, o JSON continua sendo encontrado mesmo que o programa
-# seja executado a partir de outra pasta.
-ARQUIVO = Path(__file__).parent / "data" / "animes.json"
-
 def carregar_animes():
-    """Carrega e devolve a lista de animes salva no JSON."""
-
-    # Caso o arquivo ainda não exista, cria uma lista vazia.
-    if not ARQUIVO.exists():
-        salvar_animes([])
-        return []
-
+    """Carrega e devolve a lista de animes salva no SQLite."""
     try:
-        with ARQUIVO.open("r", encoding="utf-8") as arquivo:
-            return json.load(arquivo)
-
-    except json.JSONDecodeError:
-        print("\n⚠️ O arquivo animes.json está vazio ou corrompido.")
+        return buscar_todos_animes()
+    except RuntimeError as erro:
+        print(f"\n⚠️ {erro}")
         return []
 
 
 def salvar_animes(animes):
-    """Salva a lista completa de animes no arquivo JSON."""
-    with ARQUIVO.open("w", encoding="utf-8") as arquivo:
-        json.dump(
-            animes,
-            arquivo,
-            indent=4,
-            ensure_ascii=False,
-        )
+    """Sincroniza a lista completa de animes com o SQLite."""
+    salvar_todos_animes(animes)
 
 
 def descobrir_ultimo_episodio(
@@ -249,7 +232,7 @@ def atualizar_animes():
         if data_ultimo_episodio:
             anime["data_ultimo_episodio"] = data_ultimo_episodio
 
-        # Remove a chave antiga, caso ela ainda exista no JSON.
+        # Remove a chave antiga, caso ela ainda exista nos dados antigos.
         anime.pop("ultimo_episodio", None)
 
     salvar_animes(animes)
@@ -258,7 +241,7 @@ def atualizar_animes():
 
 
 def adicionar_anime():
-    """Pesquisa um anime na API e adiciona a escolha ao JSON."""
+    """Pesquisa um anime na API e adiciona a escolha ao SQLite."""
     while True:
         nome = input(
             "\nDigite o nome do anime (ou 0 para voltar): "

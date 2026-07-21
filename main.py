@@ -1,5 +1,7 @@
 import os
 
+from database import inicializar_banco
+
 from anime_manager import adicionar_anime, atualizar_animes, remover_anime
 from tracker import(
      mostrar_episodios,
@@ -122,6 +124,8 @@ def menu_meus_animes():
 
 def executar_programa():
     """Inicializa o tracker e mantém o menu principal em execução."""
+
+    inicializar_banco()
 
     # Atualiza os animes uma única vez quando o programa é iniciado.
     avisos = atualizar_animes()

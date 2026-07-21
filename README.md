@@ -28,7 +28,8 @@ Atualmente o projeto permite:
   * Um anime retornou do hiato
   * Um ou mais novos episódios foram lançados
 * ✔ Exibir a data oficial de finalização de animes concluídos
-* ✔ Armazenar os dados localmente em JSON
+* ✔ Armazenar a biblioteca localmente em SQLite
+* ✔ Utilizar cache em JSON para reduzir consultas repetidas à API
 
 ---
 
@@ -38,7 +39,8 @@ Atualmente o projeto permite:
 * Requests
 * GraphQL
 * AniList API
-* JSON
+* SQLite
+* JSON (cache)
 * Git
 * GitHub
 
@@ -78,13 +80,16 @@ python main.py
 AnimeReleaseTracker
 │
 ├── data/
-│   └── animes.json
+│   ├── animes.db
+│   └── cache.json
 │
 ├── docs/
 │   ├── ARCHITECTURE.md
 │   └── PROJECT_CONTEXT.md
 │
 ├── main.py
+├── database.py
+├── cache.py
 ├── api.py
 ├── anime_manager.py
 ├── tracker.py
@@ -99,19 +104,18 @@ AnimeReleaseTracker
 
 🟢 Desenvolvimento ativo.
 
-A versão atual organiza a biblioteca por status, detecta automaticamente mudanças nos animes cadastrados e mantém os dados sincronizados com a AniList.
+A versão v0.6 organiza a biblioteca por status, mantém os dados no SQLite, utiliza cache local e sincroniza as informações com a AniList.
 
 ---
 
 ## 🎯 Roadmap
 
-### v0.5
+### v0.6
 
-* Implementar cache para reduzir consultas repetidas à API.
+* Cache para reduzir consultas repetidas à API.
+* Migração da biblioteca de JSON para SQLite.
 
 ### Futuro
-
-* Migrar o armazenamento para SQLite.
 * Implementar uma Central de Atualizações.
 * Desenvolver uma interface gráfica.
 * Continuar evoluindo a arquitetura do projeto.
@@ -124,7 +128,8 @@ Durante o desenvolvimento deste projeto estão sendo praticados conceitos como:
 
 * Organização de projetos Python
 * Consumo de APIs GraphQL
-* Manipulação de arquivos JSON
+* Persistência de dados com SQLite
+* Manipulação de JSON para cache
 * Tratamento de erros
 * Arquitetura modular
 * Versionamento com Git

@@ -1,163 +1,90 @@
-# ARCHITECTURE.md
+# Anime Release Tracker — Arquitetura (v0.6)
 
-# Anime Release Tracker — Arquitetura (v0.3)
+Este documento descreve a arquitetura atual do projeto e a responsabilidade de cada módulo.
 
-Este documento descreve a arquitetura atual do projeto.
+## Visão geral
 
-Seu objetivo é explicar como os módulos estão organizados, quais são suas responsabilidades e servir como referência para futuras evoluções.
-
----
-
-# Visão geral
-
-O Anime Release Tracker foi dividido em módulos para separar responsabilidades e facilitar a manutenção do código.
-
-Cada arquivo possui uma função específica dentro do projeto.
-
-```
-                 main.py
+```text
+                  main.py
+                      │
+         ┌────────────┴────────────┐
+         ▼                         ▼
+ anime_manager.py              tracker.py
+         │                         │
+         ├────────────┐            │
+         ▼            ▼            ▼
+   database.py     api.py       utils.py
+         │            │
+         ▼            ├───────────────┐
+    animes.db          ▼               ▼
+                 cache.py        AniList API
                      │
-        ┌────────────┴────────────┐
-        ▼                         ▼
-anime_manager.py             tracker.py
-        │                         │
-        ├──────────────┐          │
-        ▼              ▼          ▼
-   animes.json      utils.py    api.py
-                                     │
-                                     ▼
-                                AniList API
+                     ▼
+                 cache.json
 ```
 
----
+## Responsabilidade dos módulos
 
-# Responsabilidade dos módulos
+### `main.py`
 
-## `main.py`
+Inicializa o banco, atualiza a biblioteca ao abrir o programa, exibe avisos e controla o menu principal.
 
-Responsável por iniciar o programa.
+### `anime_manager.py`
 
-Funções:
+Gerencia a biblioteca: carrega, adiciona, remove e atualiza animes, além de detectar mudanças de status e novos episódios.
 
-* iniciar a aplicação;
-* atualizar os animes ao abrir o programa;
-* exibir os avisos encontrados;
-* mostrar o menu principal;
-* chamar as funções dos demais módulos.
+### `database.py`
 
----
+Centraliza a persistência da biblioteca no SQLite. Cria a tabela e converte os dados entre as linhas do banco e o formato usado pelo projeto.
 
-## `anime_manager.py`
+### `tracker.py`
 
-Responsável pelo gerenciamento dos animes cadastrados.
+Exibe a biblioteca, próximos episódios e episódios lançados no dia.
 
-Funções:
+### `api.py`
 
-* carregar e salvar o arquivo JSON;
-* adicionar e remover animes;
-* atualizar informações dos animes;
-* detectar mudanças de status;
-* detectar novos episódios;
-* gerar avisos de atualização.
+Centraliza todas as consultas GraphQL à AniList e utiliza o cache quando aplicável. Nenhum outro módulo deve acessar a API diretamente.
 
----
+### `cache.py`
 
-## `tracker.py`
+Mantém respostas temporárias da API em `data/cache.json`. O cache expira após 30 minutos e não substitui o banco de dados.
 
-Responsável pela exibição das informações ao usuário.
+### `utils.py`
 
-Funções:
+Reúne funções compartilhadas de títulos, datas, status, tipos e formatação do terminal.
 
-* mostrar próximos episódios;
-* mostrar episódios de hoje;
-* formatar datas e horários de lançamento.
+## Armazenamento
 
----
-
-## `api.py`
-
-Responsável pela comunicação com a API da AniList.
-
-Funções:
-
-* pesquisar animes;
-* consultar informações atualizadas;
-* consultar calendário de episódios;
-* tratar erros das requisições.
-
-Nenhum outro módulo deve acessar a AniList diretamente.
-
----
-
-## `utils.py`
-
-Contém funções compartilhadas entre diferentes módulos.
-
-Atualmente:
-
-* obter o melhor título disponível;
-* formatar tipos de anime;
-* formatar status.
-
----
-
-## `animes.json`
-
-Armazena os dados locais do projeto.
-
-Enquanto o SQLite não for implementado, este arquivo funciona como o banco de dados da aplicação.
-
----
-
-# Fluxo principal
-
-Quando o programa é iniciado:
-
-```
-main.py
-
-↓
-
-anime_manager.py atualiza os animes
-
-↓
-
-api.py consulta a AniList
-
-↓
-
-animes.json é atualizado
-
-↓
-
-main.py exibe os avisos
-
-↓
-
-menu principal
+```text
+data/
+├── animes.db    # biblioteca permanente
+└── cache.json   # respostas temporárias da API
 ```
 
----
+O SQLite é a fonte de verdade da biblioteca. O JSON é utilizado somente pelo cache.
 
-# Filosofia da arquitetura
+## Fluxo principal
 
-O projeto segue três princípios:
+```text
+main.py inicializa o SQLite
+        ↓
+anime_manager.py carrega a biblioteca pelo database.py
+        ↓
+api.py consulta o cache e, quando necessário, a AniList
+        ↓
+anime_manager.py sincroniza as alterações no SQLite
+        ↓
+main.py exibe os avisos e abre o menu
+```
 
-* **Simplicidade:** evitar complexidade desnecessária.
-* **Separação de responsabilidades:** cada módulo possui uma função bem definida.
-* **Evolução incremental:** novas funcionalidades devem ser adicionadas aos poucos, sem exigir reescrever o projeto.
+## Princípios
 
----
+* Simplicidade: evitar complexidade desnecessária.
+* Separação de responsabilidades: cada módulo possui uma função definida.
+* Evolução incremental: implementar uma melhoria por vez.
 
-# Próximos passos
+## Próximos passos
 
-As próximas versões irão expandir esta arquitetura.
-
-Planejamento atual:
-
-* **v0.4:** reorganização das listas de animes (em lançamento e finalizados).
-* **v0.5:** implementação de cache.
-* **v0.6:** migração para SQLite.
-* **v0.7:** preparação para a interface gráfica.
-
-Este documento será atualizado sempre que a arquitetura do projeto evoluir.
+* Central de Atualizações com histórico de eventos.
+* Preparação da lógica para uma futura interface.
+* Interface gráfica ou web somente após estabilizar o núcleo.
